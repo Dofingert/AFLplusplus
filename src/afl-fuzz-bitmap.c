@@ -879,3 +879,15 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
 }
 
+/* 'mem' is newly generated testfile's content. When this function been called,
+   a subprocess will automatically been called to calculated coverage data of
+   newly generated test input. */
+void get_coverage(int* new_covered, int* totally, void *mem, size_t len) {
+  // call sub-process to get covered result.
+  int fd = open("/workspace/wangzhe/coverage_input",O_WRONLY | O_CREAT | O_EXCL, DEFAULT_PERMISSION);
+  ck_write(fd, mem, len, "/workspace/wangzhe/coverage_input");
+  close(fd);
+  FILE* p_process = popen("/bin/sh coverage_helper /workspace/wangzhe/coverage_input");
+  fscanf(p_process,"%d%d",new_covered, totally);
+  return;
+}
