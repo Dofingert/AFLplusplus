@@ -896,7 +896,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
    newly generated test input. */
 void get_coverage(int* new_covered, int* totally, void *mem, size_t len) {
   // call sub-process to get covered result.
-  int fd = open("/workspace/wangzhe/afl_trace/input",O_WRONLY | O_CREAT | O_EXCL, DEFAULT_PERMISSION);
+  int fd = open("/workspace/wangzhe/afl_trace/input",O_WRONLY | O_CREAT | O_EXCL | O_TRUNC, DEFAULT_PERMISSION);
   ck_write(fd, mem, len, "/workspace/wangzhe/afl_trace/input");
   close(fd);
   system("/bin/sh /workspace/wangzhe/afl_trace/prepare_driver.sh");
