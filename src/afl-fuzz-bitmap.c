@@ -514,6 +514,9 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
       int new_covered, totally;
       get_coverage(&new_covered, &totally,mem,len);
       no_found = 0;
+      if((1000 * new_covered / totally > 1)) {
+        new_bits = 1;
+      }
     }
 
     if (likely(!new_bits)) {
