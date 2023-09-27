@@ -448,6 +448,8 @@ void write_crash_readme(afl_state_t *afl) {
 
 }
 
+void get_coverage(int* new_covered, int* totally, void *mem, size_t len);
+
 /* Check if the result of an execve() during routine fuzzing is interesting,
    save or queue the input test case for further analysis if so. Returns 1 if
    entry is saved, 0 otherwise. */
@@ -468,6 +470,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
   u8  new_bits = 0, keeping = 0, res, classified = 0, is_timeout = 0,
      need_hash = 1;
   s32 fd;
+  static int no_found = 0;
   u64 cksum = 0;
 
   /* Update path frequency. */
@@ -505,9 +508,18 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
     }
 
+    if((new_bits) || (no_found > 1000000)) {
+      // Quiet a long time since last new coverage finding,
+      // use LUT to test if we get higher hit rate.
+      int new_covered, totally;
+      get_coverage(&new_covered, &totally,mem,len);
+      no_found = 0;
+    }
+
     if (likely(!new_bits)) {
 
       if (unlikely(afl->crash_mode)) { ++afl->total_crashes; }
+      no_found++;
       return 0;
 
     }
@@ -884,8 +896,8 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
    newly generated test input. */
 void get_coverage(int* new_covered, int* totally, void *mem, size_t len) {
   // call sub-process to get covered result.
-  int fd = open("/workspace/wangzhe/afl_trace/coverage_input",O_WRONLY | O_CREAT | O_EXCL, DEFAULT_PERMISSION);
-  ck_write(fd, mem, len, "/workspace/wangzhe/afl_trace/coverage_input");
+  int fd = open("/workspace/wangzhe/afl_trace/input",O_WRONLY | O_CREAT | O_EXCL, DEFAULT_PERMISSION);
+  ck_write(fd, mem, len, "/workspace/wangzhe/afl_trace/input");
   close(fd);
   system("/bin/sh /workspace/wangzhe/afl_trace/prepare_driver.sh");
   *new_covered = 0;
