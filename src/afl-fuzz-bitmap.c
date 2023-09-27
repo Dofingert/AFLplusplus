@@ -900,8 +900,9 @@ void get_coverage(int* new_covered, int* totally, void *mem, size_t len) {
   ck_write(fd, mem, len, "/workspace/wangzhe/afl_trace/input");
   close(fd);
   system("/bin/sh /workspace/wangzhe/afl_trace/prepare_driver.sh");
-  *new_covered = 0;
-  *totally = 0;
+  system("/bin/sh /workspace/wangzhe/afl_trace/hitrate_driver.sh");
+  FILE *fp = fopen("/workspace/wangzhe/afl_trace/hit_rate", "r");
+  fscanf(fp,"%d%d", new_covered, totally);
   // fscanf(p_process,"%d%d",new_covered, totally);
   return;
 }
