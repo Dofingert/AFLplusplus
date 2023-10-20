@@ -381,6 +381,10 @@ static void usage(u8 *argv0, int more_help) {
   SAYF("Compiled with NO_SPLICING.\n");
 #endif
 
+#ifdef FANCY_BOXES_NO_UTF
+  SAYF("Compiled without UTF-8 support for line rendering in status screen.\n");
+#endif
+
 #ifdef PROFILING
   SAYF("Compiled with PROFILING.\n");
 #endif
@@ -1339,6 +1343,12 @@ int main(int argc, char **argv_orig, char **envp) {
         if (!show_help) { show_help = 1; }
 
     }
+
+  }
+
+  if (afl->sync_id && strcmp(afl->sync_id, "addseeds") == 0) {
+
+    FATAL("-M/-S name 'addseeds' is a reserved name, choose something else");
 
   }
 
@@ -2822,7 +2832,9 @@ int main(int argc, char **argv_orig, char **envp) {
 
     if (likely(afl->switch_fuzz_mode && afl->fuzz_mode == 0 &&
                !afl->non_instrumented_mode) &&
-        unlikely(cur_time > afl->last_find_time + afl->switch_fuzz_mode)) {
+        unlikely(cur_time > (likely(afl->last_find_time) ? afl->last_find_time
+                                                         : afl->start_time) +
+                                afl->switch_fuzz_mode)) {
 
       if (afl->afl_env.afl_no_ui) {
 
