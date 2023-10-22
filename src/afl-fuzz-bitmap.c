@@ -448,6 +448,188 @@ void write_crash_readme(afl_state_t *afl) {
 
 }
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#define _VECTOR_DEFAULT_LEN_ 16
+
+struct c_vector {
+  size_t   elem_size;
+  uint32_t elem_space;
+  uint32_t elem_cnt;
+  void    *data_ptr;
+};
+
+static inline void *extend_data_area(void *old_data, size_t old_size,
+                                     size_t new_size) {
+  void *ret = malloc(new_size);
+  memcpy(ret, old_data, old_size);
+  free(old_data);
+  return ret;
+}
+
+static inline struct c_vector *new_c_vector(size_t elem_size) {
+  struct c_vector *vec = malloc(sizeof(struct c_vector));
+  vec->elem_size = elem_size;
+  vec->elem_space = _VECTOR_DEFAULT_LEN_;
+  vec->elem_cnt = 0;
+  vec->data_ptr = extend_data_area(NULL, vec->elem_cnt, vec->elem_space);
+  return vec;
+}
+
+static inline void *access_c_vector(struct c_vector *self, uint32_t index) {
+  if (index >= self->elem_space) { return NULL; }
+  return self->data_ptr + index * self->elem_size;
+}
+
+static inline void push_c_vector(struct c_vector *self, void *elem_ptr) {
+  uint32_t new_cnt = self->elem_cnt + 1;
+  if (new_cnt > self->elem_space) {
+    self->elem_space *= 2;
+    self->data_ptr =
+        extend_data_area(self->data_ptr, self->elem_cnt, self->elem_space);
+  }
+  memcpy(access_c_vector(self, self->elem_cnt), elem_ptr, self->elem_size);
+  self->elem_cnt = new_cnt;
+}
+
+static inline void pop_c_vector(struct c_vector *self, void *elem_ptr) {
+  memcpy(elem_ptr, access_c_vector(self, self->elem_cnt - 1), self->elem_size);
+}
+
+int vec_elem_cnt = 4096;
+
+int        k_value = 2;
+struct c_vector *bitmap_set;
+struct c_vector *belonging_set;
+uint32_t         major_sel;
+uint8_t        **means_data_ptr;
+uint32_t        *means_data_cnt;
+
+unsigned long long calculate_distance(uint8_t *data, uint8_t *ref,
+                                      uint32_t cnt) {
+  unsigned long long abs_sum = 0;
+  for (uint32_t i = 0; i < cnt; i++) {
+    // optimise me by simd
+    int value = data[i] - ref[i];
+    value = (value < 0) ? -value : value;
+    abs_sum += value;
+  }
+  return abs_sum;
+}
+
+// this function update mneans_data.
+void update_mean_value() {
+  for (int k = 0; k < k_value; k++) {
+    means_data_cnt[k] = 0;
+    memset(means_data_ptr[k], 0, vec_elem_cnt);
+  }
+  for (int i = 0; i < bitmap_set->elem_cnt; i++) {
+    for (int j = 0; j < vec_elem_cnt; j++) {
+      int sel = *(int *)access_c_vector(belonging_set, i);
+      means_data_ptr[sel][j] += ((uint8_t *)access_c_vector(bitmap_set, i))[j];
+      means_data_cnt[sel] += 1;
+    }
+  }
+  for (int k = 0; k < k_value; k++) {
+    for (int j = 0; j < vec_elem_cnt; j++) {
+      means_data_ptr[k][j] << 16;
+      means_data_ptr[k][j] =
+          means_data_cnt[k] ? (means_data_ptr[k][j] / means_data_cnt[k]) : 0;
+    }
+  }
+}
+
+// this is our interface for interacting.
+int judge_area(uint8_t *data, unsigned long long *distance) {
+  unsigned long long min_distance = 0xffffffffffffffff;
+  int                sel;
+  for (int j = 0; j < k_value; j++) {
+    unsigned long long cur_value =
+        calculate_distance(data, means_data_ptr[j], vec_elem_cnt);
+    if (cur_value < min_distance) {
+      min_distance = cur_value;
+      sel = j;
+    }
+  }
+  *distance += min_distance;
+  return sel;
+}
+
+// divided vector to differenct area by it distance
+unsigned long long partition() {
+  unsigned long long distance = 0;
+  for (int i = 0; i < bitmap_set->elem_cnt; i++) {
+    *(int *)access_c_vector(belonging_set, i) =
+        judge_area(access_c_vector(bitmap_set, i), &distance);
+  }
+  return distance;
+}
+
+static u8 initialized;
+void init_all() {
+  bitmap_set = new_c_vector(vec_elem_cnt);
+  belonging_set = new_c_vector(sizeof(int));
+}
+
+void print_vec(uint8_t *dat, int cnt) {
+  for (int i = 0; i < cnt; i++) {
+    printf("%d%c", dat[i], i == cnt - 1 ? '\n' : ' ');
+  }
+}
+
+void init_km() {
+  static unsigned long long last_sum = 0xffffffffffffffff;
+  unsigned long long        sum = 0xffffffffffff0000;
+  means_data_ptr = malloc(k_value * sizeof(void *));
+  means_data_cnt = malloc(k_value * sizeof(int));
+  for (int i = 0; i < k_value; i++) {
+    means_data_ptr[i] = malloc(vec_elem_cnt);
+    memcpy(means_data_ptr[i], access_c_vector(bitmap_set, i), vec_elem_cnt);
+  }
+  int iter = 0;
+  while (last_sum - sum > (4 + (iter >> 9))) {
+    // for (int k = 0; k < k_value; k++) {
+    //   print_vec(means_data_ptr[k], vec_elem_cnt);
+    // }
+    last_sum = sum;
+    sum = partition();
+    update_mean_value();
+    printf("iter %d: %llu\n", iter++, sum);
+  }
+  // Judge major means_sel
+  major_sel = -1;
+  int max_cnt = 0;
+  for(int k = 0 ; k < k_value ; k++) {
+    if(means_data_cnt[k] > max_cnt) {
+      max_cnt = means_data_cnt[k];
+      major_sel = k;
+    }
+  }
+}
+
+// int main()
+// {
+//     printf("hello world\n");
+//     init_all();
+//     uint8_t tmp_arr_1[vec_elem_cnt] = {51, 43};
+//     uint8_t tmp_arr_2[vec_elem_cnt] = {47, 61};
+//     uint8_t tmp_arr_3[vec_elem_cnt] = {20, 18};
+//     uint8_t tmp_arr_4[vec_elem_cnt] = {167, 157};
+//     uint8_t tmp_arr_5[vec_elem_cnt] = {127, 0};
+//     uint8_t tmp_arr_6[vec_elem_cnt] = {0, 127};
+
+//     push_c_vector(bitmap_set, &tmp_arr_1);
+//     push_c_vector(bitmap_set, &tmp_arr_2);
+//     push_c_vector(bitmap_set, &tmp_arr_3);
+//     push_c_vector(bitmap_set, &tmp_arr_4);
+//     push_c_vector(bitmap_set, &tmp_arr_5);
+//     push_c_vector(bitmap_set, &tmp_arr_6);
+//     init_km();
+// }
+
+
 /* Check if the result of an execve() during routine fuzzing is interesting,
    save or queue the input test case for further analysis if so. Returns 1 if
    entry is saved, 0 otherwise. */
@@ -455,10 +637,34 @@ void write_crash_readme(afl_state_t *afl) {
 u8 __attribute__((hot))
 save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
-  if (unlikely(len == 0)) { return 0; }
+  if(unlikely(!initialized)) {
+    vec_elem_cnt = afl->shm.map_size;
+    init_all();
+    initialized = 1;
+  }
+
+  static u8 kmeans_mode = 0; // 0 for exploration, 1 for generating.
+  static u32 no_found_cnt = 0;
+
+  if(kmeans_mode == 0 && no_found_cnt > /* LIMIT FOR NO FOUNDING EXPLORATION*/ 200000) {
+    // Mode transaction
+    // Calculate kmeans...
+    init_km();
+    kmeans_mode = 1;
+  }
+
+  if(!kmeans_mode) {
+    push_c_vector(bitmap_set, (u64 *)afl->fsrv.trace_bits);
+    bitmap_set->elem_cnt -= 1;
+  }
+  if (unlikely(len == 0)) { 
+    no_found_cnt++;
+    return 0;
+  }
 
   if (unlikely(fault == FSRV_RUN_TMOUT && afl->afl_env.afl_ignore_timeouts)) {
 
+    no_found_cnt++;
     return 0;
 
   }
@@ -474,7 +680,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
   /* Generating a hash on every input is super expensive. Bad idea and should
      only be used for special schedules */
-  if (likely(afl->schedule >= FAST && afl->schedule <= RARE)) {
+  if (likely(afl->schedule >= FAST && afl->schedule <= RARE) && (kmeans_mode == 0)) {
 
     classify_counts(&afl->fsrv);
     classified = 1;
@@ -493,23 +699,33 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     /* Keep only if there are new bits in the map, add to queue for
        future fuzzing, etc. */
 
-    if (likely(classified)) {
-
-      new_bits = has_new_bits(afl, afl->virgin_bits);
-
+    if(kmeans_mode) {
+      // Judge by 2-kmeans, whether we add this node.
+      unsigned long long distance = 0;
+      if(major_sel != judge_area((u64 *)afl->fsrv.trace_bits, &distance)) {
+        return 0;
+      }
+      new_bits = 1;
     } else {
+      if (likely(classified)) {
 
-      new_bits = has_new_bits_unclassified(afl, afl->virgin_bits);
+        new_bits = has_new_bits(afl, afl->virgin_bits);
 
-      if (unlikely(new_bits)) { classified = 1; }
+      } else {
 
-    }
+        new_bits = has_new_bits_unclassified(afl, afl->virgin_bits);
 
-    if (likely(!new_bits)) {
+        if (unlikely(new_bits)) { classified = 1; }
 
-      if (unlikely(afl->crash_mode)) { ++afl->total_crashes; }
-      return 0;
+      }
 
+      if (likely(!new_bits)) {
+
+        if (unlikely(afl->crash_mode)) { ++afl->total_crashes; }
+        no_found_cnt++;
+        return 0;
+
+      }
     }
 
   save_to_queue:
@@ -532,6 +748,8 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     ck_write(fd, mem, len, queue_fn);
     close(fd);
     add_to_queue(afl, queue_fn, len, 0);
+    bitmap_set->elem_cnt += 1;
+    no_found_cnt = 0;
 
     if (unlikely(afl->fuzz_mode) &&
         likely(afl->switch_fuzz_mode && !afl->non_instrumented_mode)) {
