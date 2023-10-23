@@ -733,7 +733,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 #ifndef SIMPLE_FILES
 
     queue_fn =
-        alloc_printf("%s/queue/id:%06u,%s", afl->out_dir, afl->queued_items,
+        alloc_printf("%s/queue/%d,id:%06u,%s", afl->out_dir, kmeans_mode, afl->queued_items,
                      describe_op(afl, new_bits + is_timeout,
                                  NAME_MAX - strlen("id:000000,")));
 
