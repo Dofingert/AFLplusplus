@@ -660,6 +660,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     push_c_vector(bitmap_set, afl->fsrv.trace_bits);
     push_c_vector(belonging_set, &tmp_zero);
     bitmap_set->elem_cnt -= 1;
+    belonging_set->elem_cnt -= 1;
   }
   if (unlikely(len == 0)) { 
     no_found_cnt++;
@@ -753,6 +754,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     close(fd);
     add_to_queue(afl, queue_fn, len, 0);
     bitmap_set->elem_cnt += 1;
+    belonging_set->elem_cnt += 1;
     no_found_cnt = 0;
 
     if (unlikely(afl->fuzz_mode) &&
