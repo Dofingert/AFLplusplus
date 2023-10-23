@@ -589,6 +589,7 @@ void init_km() {
     means_data_ptr[i] = malloc(vec_elem_cnt);
     memcpy(means_data_ptr[i], access_c_vector(bitmap_set, i), vec_elem_cnt);
   }
+  printf("im here 0\n");
   int iter = 0;
   while (last_sum - sum > (4 + (iter >> 9))) {
     // for (int k = 0; k < k_value; k++) {
@@ -647,7 +648,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
   static u8 kmeans_mode = 0; // 0 for exploration, 1 for generating.
   static u32 no_found_cnt = 0;
 
-  if(kmeans_mode == 0 && no_found_cnt > /* LIMIT FOR NO FOUNDING EXPLORATION*/ 200000) {
+  if(kmeans_mode == 0 && no_found_cnt > /* LIMIT FOR NO FOUNDING EXPLORATION*/ 800000) {
     // Mode transaction
     // Calculate kmeans...
     init_km();
@@ -655,7 +656,9 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
   }
 
   if(!kmeans_mode) {
+    int tmp_zero = 0;
     push_c_vector(bitmap_set, afl->fsrv.trace_bits);
+    push_c_vector(belonging_set, &tmp_zero);
     bitmap_set->elem_cnt -= 1;
   }
   if (unlikely(len == 0)) { 
