@@ -474,7 +474,7 @@ static inline struct c_vector *new_c_vector(size_t elem_size) {
   vec->elem_size = elem_size;
   vec->elem_space = _VECTOR_DEFAULT_LEN_;
   vec->elem_cnt = 0;
-  vec->data_ptr = extend_data_area(NULL, vec->elem_cnt, vec->elem_space);
+  vec->data_ptr = extend_data_area(NULL, vec->elem_cnt * vec->elem_size, vec->elem_space * vec->elem_size);
   return vec;
 }
 
@@ -488,7 +488,7 @@ static inline void push_c_vector(struct c_vector *self, void *elem_ptr) {
   if (new_cnt > self->elem_space) {
     self->elem_space *= 2;
     self->data_ptr =
-        extend_data_area(self->data_ptr, self->elem_cnt, self->elem_space);
+        extend_data_area(self->data_ptr, self->elem_cnt * self->elem_size, self->elem_space * self->elem_size);
   }
   memcpy(access_c_vector(self, self->elem_cnt), elem_ptr, self->elem_size);
   self->elem_cnt = new_cnt;
@@ -655,7 +655,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
   }
 
   if(!kmeans_mode) {
-    push_c_vector(bitmap_set, (u64 *)afl->fsrv.trace_bits);
+    push_c_vector(bitmap_set, afl->fsrv.trace_bits);
     bitmap_set->elem_cnt -= 1;
   }
   if (unlikely(len == 0)) { 
