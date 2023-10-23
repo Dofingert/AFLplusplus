@@ -567,10 +567,11 @@ unsigned long long partition() {
   return distance;
 }
 
-static u8 initialized;
+static u8 initialized = 0;
 void init_all() {
   bitmap_set = new_c_vector(vec_elem_cnt);
   belonging_set = new_c_vector(sizeof(int));
+  printf("initialized ok.\n");
 }
 
 void print_vec(uint8_t *dat, int cnt) {
