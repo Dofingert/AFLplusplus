@@ -635,7 +635,7 @@ void init_km() {
 /* Check if the result of an execve() during routine fuzzing is interesting,
    save or queue the input test case for further analysis if so. Returns 1 if
    entry is saved, 0 otherwise. */
-
+u8 kmeans_mode = 0; // 0 for exploration, 1 for generating.
 u8 __attribute__((hot))
 save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
@@ -645,7 +645,6 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     initialized = 1;
   }
 
-  static u8 kmeans_mode = 0; // 0 for exploration, 1 for generating.
   static u32 no_found_cnt = 0;
 
   if(kmeans_mode == 0 && no_found_cnt > /* LIMIT FOR NO FOUNDING EXPLORATION*/ 800000) {

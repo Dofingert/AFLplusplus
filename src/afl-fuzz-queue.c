@@ -44,7 +44,7 @@ void run_afl_custom_queue_new_entry(afl_state_t *afl, struct queue_entry *q,
 #endif
 
 /* select next queue entry based on alias algo - fast! */
-
+extern u8 kmeans_mode;
 inline u32 select_next_queue_entry(afl_state_t *afl) {
 
   u32    s = rand_below(afl, afl->queued_items);
@@ -63,6 +63,9 @@ inline u32 select_next_queue_entry(afl_state_t *afl) {
 double compute_weight(afl_state_t *afl, struct queue_entry *q,
                       double avg_exec_us, double avg_bitmap_size,
                       double avg_top_size) {
+  if(kmeans_mode) {
+    return rand_next_percent(afl) * 20;
+  }
 
   double weight = 1.0;
 
