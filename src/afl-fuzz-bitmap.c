@@ -602,10 +602,10 @@ void init_km() {
   }
   // Judge major means_sel
   major_sel = -1;
-  long long min_cnt = 0x7fffffffffffffffll;
+  long long max_cnt = 0x0;
   for(int k = 0 ; k < k_value ; k++) {
-    if(means_data_cnt[k] < min_cnt) {
-      min_cnt = means_data_cnt[k];
+    if(means_data_cnt[k] > max_cnt) {
+      max_cnt = means_data_cnt[k];
       major_sel = k;
     }
   }
