@@ -644,7 +644,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
         snprintf(filename_buf, 4095, "%s/queue/gen_%06u", afl->out_dir, ++valid_input_cnt);
         int fd = open(filename_buf, O_WRONLY | O_CREAT | O_EXCL, DEFAULT_PERMISSION);
         if (unlikely(fd < 0)) { PFATAL("Unable to create '%s'", filename_buf); }
-        ck_write(fd, mem, len, queue_fn);
+        ck_write(fd, mem, len, filename_buf);
         close(fd);
     }
   }
