@@ -630,6 +630,8 @@ typedef struct afl_state {
   AFL_RAND_RETURN rand_seed[3];
   s64             init_seed;
 
+  u64 last_us;
+
   u64 total_cal_us,                     /* Total calibration time (us)      */
       total_cal_cycles;                 /* Total calibration cycles         */
 
