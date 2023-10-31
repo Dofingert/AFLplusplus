@@ -628,6 +628,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
   }
 
   static u32 no_found_cnt = 0;
+  static u32 valid_input_cnt = 0;
 
   if(gen_mode == 0 && no_found_cnt > /* LIMIT FOR NO FOUNDING EXPLORATION*/ 1000000) {
     // Mode transaction
@@ -639,7 +640,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
   if(gen_mode) {
     if(avg_byte_cnt * 1.5 < count_bytes(afl, afl->fsrv.trace_bits)) {
        // Valid test input.
-       snprintf(filename_buf, 4095, "%s/queue/id_%06u", afl->out_dir, afl->queued_items);
+       snprintf(filename_buf, 4095, "%s/samples/id_%06u", afl->out_dir, ++valid_input_cnt);
     }
   }
 
