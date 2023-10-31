@@ -635,12 +635,17 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     // Calculate kmeans...
     // init_km();
     gen_mode = 1;
+    printf("GENMODE!");
   }
 
   if(gen_mode) {
     if(avg_byte_cnt * 1.5 < count_bytes(afl, afl->fsrv.trace_bits)) {
        // Valid test input.
-       snprintf(filename_buf, 4095, "%s/samples/id_%06u", afl->out_dir, ++valid_input_cnt);
+        snprintf(filename_buf, 4095, "%s/queue/gen_%06u", afl->out_dir, ++valid_input_cnt);
+        int fd = open(filename_buf, O_WRONLY | O_CREAT | O_EXCL, DEFAULT_PERMISSION);
+        if (unlikely(fd < 0)) { PFATAL("Unable to create '%s'", queue_fn); }
+        ck_write(fd, mem, len, queue_fn);
+        close(fd);
     }
   }
 
