@@ -640,10 +640,14 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
   if(gen_mode) {
     u64 avg_us;
+    static double avg_k = 1.5;
+    static u64 last_seen_ms = 0;
     if (afl->total_cal_cycles) {
       avg_us = afl->total_cal_us / afl->total_cal_cycles;
     }
-    if(avg_byte_cnt * 1.5 < count_non_255_bytes(afl, afl->fsrv.trace_bits)) {
+    u64 now_time_ms = get_cur_time();
+    u64 diff_time = now_time_ms - last_seen_ms;
+    if(avg_byte_cnt * avg_k < count_non_255_bytes(afl, afl->fsrv.trace_bits)) {
     // if(avg_us * 10 < afl->last_us) {
        // Valid test input.
         snprintf(filename_buf, 4095, "%s/queue/gen_%06u", afl->out_dir, ++valid_input_cnt);
@@ -651,7 +655,15 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
         if (unlikely(fd < 0)) { PFATAL("Unable to create '%s'", filename_buf); }
         ck_write(fd, mem, len, filename_buf);
         close(fd);
-        printf("GEN%d %d!", avg_us, valid_input_cnt);
+        printf("GEN%d %d!", diff_time, valid_input_cnt);
+        last_seen_ms = now_time_ms;
+        if(diff_time < 10*1000) {
+          avg_k *= 1.01;
+        }
+    } else {
+      if(diff_time > 10*1000 - 500) {
+        avg_k *= 0.99;
+      }
     }
   }
 
