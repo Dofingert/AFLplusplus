@@ -611,31 +611,13 @@ void init_km() {
   }
 }
 
-// int main()
-// {
-//     printf("hello world\n");
-//     init_all();
-//     uint8_t tmp_arr_1[vec_elem_cnt] = {51, 43};
-//     uint8_t tmp_arr_2[vec_elem_cnt] = {47, 61};
-//     uint8_t tmp_arr_3[vec_elem_cnt] = {20, 18};
-//     uint8_t tmp_arr_4[vec_elem_cnt] = {167, 157};
-//     uint8_t tmp_arr_5[vec_elem_cnt] = {127, 0};
-//     uint8_t tmp_arr_6[vec_elem_cnt] = {0, 127};
-
-//     push_c_vector(bitmap_set, &tmp_arr_1);
-//     push_c_vector(bitmap_set, &tmp_arr_2);
-//     push_c_vector(bitmap_set, &tmp_arr_3);
-//     push_c_vector(bitmap_set, &tmp_arr_4);
-//     push_c_vector(bitmap_set, &tmp_arr_5);
-//     push_c_vector(bitmap_set, &tmp_arr_6);
-//     init_km();
-// }
-
-
 /* Check if the result of an execve() during routine fuzzing is interesting,
    save or queue the input test case for further analysis if so. Returns 1 if
    entry is saved, 0 otherwise. */
-u8 kmeans_mode = 0; // 0 for exploration, 1 for generating.
+u8 gen_mode = 0; // 0 for exploration, 1 for generating.
+double avg_byte_cnt = 0.f;
+char filename_buf[4096];
+u32 input_cnt = 0;
 u8 __attribute__((hot))
 save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
@@ -647,20 +629,27 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
   static u32 no_found_cnt = 0;
 
-  if(kmeans_mode == 0 && no_found_cnt > /* LIMIT FOR NO FOUNDING EXPLORATION*/ 800000) {
+  if(gen_mode == 0 && no_found_cnt > /* LIMIT FOR NO FOUNDING EXPLORATION*/ 1000000) {
     // Mode transaction
     // Calculate kmeans...
-    init_km();
-    kmeans_mode = 1;
+    // init_km();
+    gen_mode = 1;
   }
 
-  if(!kmeans_mode) {
-    int tmp_zero = 0;
-    push_c_vector(bitmap_set, afl->fsrv.trace_bits);
-    push_c_vector(belonging_set, &tmp_zero);
-    bitmap_set->elem_cnt -= 1;
-    belonging_set->elem_cnt -= 1;
+  if(gen_mode) {
+    if(avg_byte_cnt * 1.5 < count_bytes(afl, afl->fsrv.trace_bits)) {
+       // Valid test input.
+       snprintf(filename_buf, 4095, "%s/queue/id_%06u", afl->out_dir, afl->queued_items);
+    }
   }
+
+  // if(!gen_mode) {
+  //   int tmp_zero = 0;
+  //   push_c_vector(bitmap_set, afl->fsrv.trace_bits);
+  //   push_c_vector(belonging_set, &tmp_zero);
+  //   bitmap_set->elem_cnt -= 1;
+  //   belonging_set->elem_cnt -= 1;
+  // }
   if (unlikely(len == 0)) { 
     no_found_cnt++;
     return 0;
@@ -684,7 +673,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
   /* Generating a hash on every input is super expensive. Bad idea and should
      only be used for special schedules */
-  if (likely(afl->schedule >= FAST && afl->schedule <= RARE) && (kmeans_mode == 0)) {
+  if (likely(afl->schedule >= FAST && afl->schedule <= RARE)) {
 
     classify_counts(&afl->fsrv);
     classified = 1;
@@ -703,14 +692,14 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     /* Keep only if there are new bits in the map, add to queue for
        future fuzzing, etc. */
 
-    if(kmeans_mode) {
-      // Judge by 2-kmeans, whether we add this node.
-      unsigned long long distance = 0;
-      if(major_sel != judge_area((u64 *)afl->fsrv.trace_bits, &distance)) {
-        return 0;
-      }
-      new_bits = 1;
-    } else {
+    // if(gen_mode) {
+    //   // Judge by 2-kmeans, whether we add this node.
+    //   unsigned long long distance = 0;
+    //   if(major_sel != judge_area((u64 *)afl->fsrv.trace_bits, &distance)) {
+    //     return 0;
+    //   }
+    //   new_bits = 1;
+    // } else {
       if (likely(classified)) {
 
         new_bits = has_new_bits(afl, afl->virgin_bits);
@@ -730,14 +719,14 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
         return 0;
 
       }
-    }
+    // }
 
   save_to_queue:
 
 #ifndef SIMPLE_FILES
 
     queue_fn =
-        alloc_printf("%s/queue/%d,id:%06u,%s", afl->out_dir, kmeans_mode, afl->queued_items,
+        alloc_printf("%s/queue/id:%06u,%s", afl->out_dir, afl->queued_items,
                      describe_op(afl, new_bits + is_timeout,
                                  NAME_MAX - strlen("id:000000,")));
 
@@ -752,8 +741,10 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     ck_write(fd, mem, len, queue_fn);
     close(fd);
     add_to_queue(afl, queue_fn, len, 0);
-    bitmap_set->elem_cnt += 1;
-    belonging_set->elem_cnt += 1;
+    // bitmap_set->elem_cnt += 1;
+    // belonging_set->elem_cnt += 1;
+    avg_byte_cnt = (avg_byte_cnt * input_cnt + count_bytes(afl, afl->fsrv.trace_bits)) / (input_cnt + 1);
+    input_cnt = input_cnt + 1;
     no_found_cnt = 0;
 
     if (unlikely(afl->fuzz_mode) &&
