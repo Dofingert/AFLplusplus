@@ -40,13 +40,31 @@ void write_bitmap(afl_state_t *afl) {
 
   if (!afl->bitmap_changed) { return; }
   afl->bitmap_changed = 0;
-
+/**  */
   snprintf(fname, PATH_MAX, "%s/fuzz_bitmap", afl->out_dir);
   fd = open(fname, O_WRONLY | O_CREAT | O_TRUNC, DEFAULT_PERMISSION);
 
-  if (fd < 0) { PFATAL("Unable to open '%s'", fname); }
+  if  (fd < 0) { PFATAL("Unable to open '%s'", fname); }
 
   ck_write(fd, afl->virgin_bits, afl->fsrv.map_size, fname);
+  /*zhanghongxiang begin*/
+  FILE *fpWrite=NULL;
+  fpWrite = fopen("/workspace/zhanghongxiang/cJSON/myout/bitmap.txt","a");
+  if (fpWrite!=NULL)
+  {
+  printf("file writting!\n");
+  fprintf(fpWrite,"%s\n",fname);
+  //printf("1\n");
+  fprintf(fpWrite,"%d\n",afl->virgin_bits);
+  //printf("2\n");
+  //fprintf(fpWrite,"%s\n",afl->fsrv.map_size);
+  //printf("3\n");
+  //fprintf(fpWrite,"%s\n",fd);
+  //printf("4\n");
+  }
+  else{printf("file error!\n");}
+  if(fpWrite!=NULL){fclose(fpWrite);}
+  /* zhanghongxiang end*/
 
   close(fd);
 
@@ -674,7 +692,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
   //   bitmap_set->elem_cnt -= 1;
   //   belonging_set->elem_cnt -= 1;
   // }
-  if (unlikely(len == 0)) { 
+  if (unlikely(len == 0)) {
     no_found_cnt++;
     return 0;
   }
@@ -1116,4 +1134,3 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
   return keeping;
 
 }
-
