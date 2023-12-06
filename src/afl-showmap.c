@@ -180,7 +180,7 @@ void classify_counts(afl_forkserver_t *fsrv) {
   u8       *mem = fsrv->trace_bits;
   const u8 *map = binary_mode ? count_class_binary : count_class_human;
 
-  u32 i = map_size;
+ u32 i = map_size;
 
   if (edges_only) {
 
@@ -1332,7 +1332,7 @@ int main(int argc, char **argv_orig, char **envp) {
         return -1;
         break;
 
-      default:
+      defaul:
         usage(argv[0]);
 
     }
@@ -1811,4 +1811,3 @@ int main(int argc, char **argv_orig, char **envp) {
   exit(ret);
 
 }
-

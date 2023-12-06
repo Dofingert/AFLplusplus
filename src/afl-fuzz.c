@@ -2398,6 +2398,12 @@ int main(int argc, char **argv_orig, char **envp) {
 
   cull_queue(afl);
 
+//zhanghongxiang begin
+int full_trace_bits[afl->fsrv.map_size];
+for(int i = 0; i < afl->fsrv.map_size; i++)
+  full_trace_bits[i] = 0;
+//zhanghongxiang end
+
   // ensure we have at least one seed that is not disabled.
   u32 entry, valid_seeds = 0;
   for (entry = 0; entry < afl->queued_items; ++entry)
@@ -2716,7 +2722,13 @@ int main(int argc, char **argv_orig, char **envp) {
     }
 
     ++runs_in_current_cycle;
-
+/*
+    //zhanghongxiang begin
+    int full_trace_bits[afl->fsrv.map_size];
+    for(int i = 0; i < afl->fsrv.map_size; i++)
+      full_trace_bits[i] = 0;
+    //zhanghongxiang end
+*/
     do {
 
       if (likely(!afl->old_seed_selection)) {
@@ -2771,6 +2783,21 @@ int main(int argc, char **argv_orig, char **envp) {
       }
 
       skipped_fuzz = fuzz_one(afl);
+      //zhanghongxiang begin
+      if(true)
+        {
+          FILE *f = fopen("/workspace/zhanghongxiang/cJSON/myout/output.txt", "w");
+          if (!f) { PFATAL("fdopen() failed"); }
+          for (int i = 0; i < map_size; i++) {
+            if (!afl->fsrv.trace_bits[i]) { continue; }
+          full_trace_bits[i] += afl->fsrv.trace_bits[i];
+          fprintf(f, "%06u:%u\n", i, full_trace_bits[i]);
+        }
+      fprintf(f,"One Case end\n");
+      fclose(f);
+      }
+      //zhanghongxiang end
+
   #ifdef INTROSPECTION
       ++afl->queue_cur->stats_selected;
 
@@ -3012,4 +3039,3 @@ stop_fuzzing:
 }
 
 #endif                                                          /* !AFL_LIB */
-
