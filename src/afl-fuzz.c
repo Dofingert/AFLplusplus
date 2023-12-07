@@ -2791,8 +2791,10 @@ for(int i = 0; i < afl->fsrv.map_size; i++)
           for (int i = 0; i < map_size; i++) {
             if (!afl->fsrv.trace_bits[i]) { continue; }
           full_trace_bits[i] += afl->fsrv.trace_bits[i];
-          fprintf(f, "%06u:%u\n", i, full_trace_bits[i]);
         }
+        for (int i = 0; i < map_size; i++)
+          if (full_trace_bits[i] != 0)
+            fprintf(f, "%06u:%u\n", i, full_trace_bits[i]);
       fprintf(f,"One Case end\n");
       fclose(f);
       }
