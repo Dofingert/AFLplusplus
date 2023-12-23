@@ -201,7 +201,7 @@ typedef struct afl_forkserver {
   char                 *nyx_tmp_workdir_path;
   s32                   nyx_log_fd;
 #endif
-
+  u8* register_bits;
 } afl_forkserver_t;
 
 typedef enum fsrv_run_result {
@@ -246,4 +246,3 @@ void              afl_fsrv_kill(afl_forkserver_t *fsrv);
 #endif                                                        /* ^RLIMIT_AS */
 
 #endif
-
