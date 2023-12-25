@@ -201,8 +201,12 @@ bool AFLCoverage::runOnModule(Module &M) {
 
   LLVMContext &C = M.getContext();
 
+  Type        *VoidTy = Type::getVoidTy(C);
   IntegerType *Int8Ty = IntegerType::getInt8Ty(C);
   IntegerType *Int32Ty = IntegerType::getInt32Ty(C);
+  /* QM2: function to grab stack dataflow and save them to a hash map. */
+  FunctionCallee StackLogFunc;
+
 #ifdef AFL_HAVE_VECTOR_INTRINSICS
   IntegerType *IntLocTy =
       IntegerType::getIntNTy(C, sizeof(PREV_LOC_T) * CHAR_BIT);
@@ -508,6 +512,8 @@ bool AFLCoverage::runOnModule(Module &M) {
 
   Value    *PrevCtx = NULL;     // CTX sensitive coverage
   LoadInst *PrevCaller = NULL;  // K-CTX coverage
+
+  StackLogFunc = M.getOrInsertFunction("__afl_stack_log", VoidTy, Int32Ty); // void __afl_stack_log(int32_t map_id);
 
   /* Instrument all the things! */
 
@@ -835,6 +841,15 @@ bool AFLCoverage::runOnModule(Module &M) {
 
       /* Update prev_loc history vector (by placing cur_loc at the head of the
          vector and shuffle the other elements back by one) */
+      }
+
+      /* QM2: Call __afl_stack_log here to save all stack infomation */
+      IRB.CreateCall(StackLogFunc, CurLoc)
+#if LLVM_VERSION_MAJOR >= 12
+        ->setCannotMerge();
+#else
+        ->cannotMerge();
+#endif
 
       StoreInst *Store;
 
