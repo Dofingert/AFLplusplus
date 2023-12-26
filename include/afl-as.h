@@ -139,7 +139,7 @@ static const u8 *trampoline_fmt_64 =
     "\n"
     ".align 4\n"
     "\n"
-    "leaq -(128+24)(%%rsp), %%rsp\n"
+    "leaq -(128+64)(%%rsp), %%rsp\n"
     "movq %%r10,  0(%%rsp)\n"
     "movq %%r11,  8(%%rsp)\n"
     "movq %%rax, 16(%%rsp)\n"
@@ -161,7 +161,7 @@ static const u8 *trampoline_fmt_64 =
     "movq 16(%%rsp), %%rax\n"
     "movq  8(%%rsp), %%r11\n"
     "movq  0(%%rsp), %%r10\n"
-    "leaq (128+24)(%%rsp), %%rsp\n"
+    "leaq (128+64)(%%rsp), %%rsp\n"
     "\n"
     "/* --- END --- */\n"
     "\n";
