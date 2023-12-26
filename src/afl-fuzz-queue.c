@@ -27,6 +27,8 @@
 #include <ctype.h>
 #include <math.h>
 
+int ROUND = 0;
+
 #ifdef _STANDALONE_MODULE
 void minimize_bits(afl_state_t *afl, u8 *dst, u8 *src) {
 
@@ -902,6 +904,38 @@ u32 calculate_score(afl_state_t *afl, struct queue_entry *q) {
   u32 avg_exec_us = afl->total_cal_us / cal_cycles;
   u32 avg_bitmap_size = afl->total_bitmap_size / bitmap_entries;
   u32 perf_score = 100;
+  float trace_score = 100;
+/*
+  ROUND++;
+  if(ROUND == 0)
+  {system("rm -rf /workspace/zhanghongxiang/cJSON/myout/hot_mem/");}
+  for(int i = 0; i < 10; i++)
+  {
+    File *f = FILE *f = fopen("/workspace/zhanghongxiang/cJSON/myout/hotmem/"+&ptr[i], "a");
+    if (!f) {PFATAL("fdopen() failed");}
+    char buffer[1000];
+    int _ = 0;
+    while(!feof(f))
+    {
+      fgets(buffer , 1000 , f);
+      if(buffer == &ptr[i])
+      {
+        _++;
+        break;
+      }
+    }
+
+    if(_ == 0)
+    {
+      trace_score *= 1.5;
+      fprintf(f, "%s\n", &ptr[i]);
+    }
+    else
+    {trace_score *= 0.75;}
+    fclose(f);
+
+  }
+*/
 
   /* Adjust score based on execution speed of this path, compared to the
      global average. Multiplier ranges from 0.1x to 3x. Fast inputs are
@@ -1176,8 +1210,11 @@ u32 calculate_score(afl_state_t *afl, struct queue_entry *q) {
     perf_score = afl->havoc_max_mult * 100;
 
   }
-
-  return perf_score;
+  u32 __ = trace_score;
+  if(ROUND <10000)
+    return perf_score;
+  else
+    return __;
 
 }
 
@@ -1461,4 +1498,3 @@ inline void queue_testcase_store_mem(afl_state_t *afl, struct queue_entry *q,
   }
 
 }
-
