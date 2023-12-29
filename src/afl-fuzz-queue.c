@@ -28,6 +28,7 @@
 #include <math.h>
 
 int ROUND = 0;
+int HNB = 1000;
 
 #ifdef _STANDALONE_MODULE
 void minimize_bits(afl_state_t *afl, u8 *dst, u8 *src) {
@@ -905,6 +906,11 @@ u32 calculate_score(afl_state_t *afl, struct queue_entry *q) {
   u32 avg_bitmap_size = afl->total_bitmap_size / bitmap_entries;
   u32 perf_score = 100;
   float trace_score = 100;
+  u8 hnb = 0;
+  hnb = has_new_bits(afl, afl->virgin_bits);
+  HNB--;
+  if(hnb) HNB = 1000;
+
 /*
   ROUND++;
   if(ROUND == 0)

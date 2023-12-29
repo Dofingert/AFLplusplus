@@ -2185,6 +2185,9 @@ int main(int argc, char **argv_orig, char **envp) {
   afl->fsrv.trace_bits =
       afl_shm_init(&afl->shm, afl->fsrv.map_size, afl->non_instrumented_mode);
 
+ // afl->fsrv.register_bits = shmat(1229);
+
+
   if (!afl->non_instrumented_mode && !afl->fsrv.qemu_mode &&
       !afl->unicorn_mode && !afl->fsrv.frida_mode && !afl->fsrv.cs_mode &&
       !afl->afl_env.afl_skip_bin_check) {
@@ -2788,13 +2791,16 @@ for(int i = 0; i < afl->fsrv.map_size; i++)
         {
           FILE *f = fopen("/workspace/zhanghongxiang/cJSON/myout/output.txt", "w");
           if (!f) { PFATAL("fdopen() failed"); }
-          for (int i = 0; i < map_size; i++) {
+          for (int i = 0; i < afl->fsrv.map_size; i++) {
             if (!afl->fsrv.trace_bits[i]) { continue; }
           full_trace_bits[i] += afl->fsrv.trace_bits[i];
         }
-        for (int i = 0; i < map_size; i++)
-          if (full_trace_bits[i] != 0)
+        for (int i = 0; i < afl->fsrv.map_size; i++)
+        {
+          //if (full_trace_bits[i] != 0)
+            //fprintf(f, "%06u:%u\n", i, afl->virgin_bits[i]);
             fprintf(f, "%06u:%u\n", i, full_trace_bits[i]);
+        }
       fprintf(f,"One Case end\n");
       fclose(f);
       }
