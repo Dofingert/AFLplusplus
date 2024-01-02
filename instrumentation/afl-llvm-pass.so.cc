@@ -844,7 +844,7 @@ bool AFLCoverage::runOnModule(Module &M) {
       }
 
       /* QM2: Call __afl_stack_log here to save all stack infomation */
-      IRB.CreateCall(StackLogFunc, CurLoc)
+      // IRB.CreateCall(StackLogFunc, CurLoc)
 #if LLVM_VERSION_MAJOR >= 12
         ->setCannotMerge();
 #else
