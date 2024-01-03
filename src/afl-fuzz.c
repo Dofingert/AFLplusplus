@@ -2185,7 +2185,8 @@ int main(int argc, char **argv_orig, char **envp) {
   afl->fsrv.trace_bits =
       afl_shm_init(&afl->shm, afl->fsrv.map_size, afl->non_instrumented_mode);
 
- // afl->fsrv.register_bits = shmat(1229);
+  int shmid = shmget(1229, 32*32*1024*8, IPC_CREAT | IPC_EXCL | DEFAULT_PERMISSION);
+  afl->fsrv.register_bits = shmat(1229, 0, 0);
 
 
   if (!afl->non_instrumented_mode && !afl->fsrv.qemu_mode &&

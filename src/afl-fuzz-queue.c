@@ -26,9 +26,42 @@
 #include <limits.h>
 #include <ctype.h>
 #include <math.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/file.h>
+#include <wait.h>
+#include <sys/mman.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+#define TRACE_HISTORY_TABLE_SIZE 32 * 1024
+#define TRACE_HISTORY_LENGTH 32
 
 int ROUND = 0;
 int HNB = 1000;
+
+static void *helper_open_shm(int shm_key, int *create, void *location, size_t filesize)
+{
+  int shm_id = -1, shm_flag = 0;
+  while (1)
+  {
+    shm_id = shmget(shm_key, filesize, shm_flag);
+    if (shm_id >= 0)
+      break;
+    if (ENOENT != errno || *create == 0)
+    {
+      printf("Can not open shared memory 0x%x, errno %d\n", shm_key, errno);
+      return NULL;
+    }
+    shm_flag = IPC_CREAT | 0660;
+    *create = 0;
+  }
+  return shmat(shm_id, location, 0);
+}
 
 #ifdef _STANDALONE_MODULE
 void minimize_bits(afl_state_t *afl, u8 *dst, u8 *src) {
@@ -911,37 +944,42 @@ u32 calculate_score(afl_state_t *afl, struct queue_entry *q) {
   HNB--;
   if(hnb) HNB = 1000;
 
-/*
-  ROUND++;
-  if(ROUND == 0)
-  {system("rm -rf /workspace/zhanghongxiang/cJSON/myout/hot_mem/");}
-  for(int i = 0; i < 10; i++)
+  /*
+  int *arr=NULL,*new_arr=NULL,size,new_size;
+  size = 1000;
+  arr=(int*)calloc(size,sizeof(int));
+  */
+  int create = 1;
+  u8* stack_hash_map = helper_open_shm(1229, &create, NULL, TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * 8);
+  //printf("%s",&stack_hash_map);
+
+  //free(arr);
+
+  FILE *f = fopen("/workspace/zhanghongxiang/cJSON/myout/hotmem/hash.txt", "a");
+  if (!f) {PFATAL("fdopen() failed");}
+  char buffer[256];
+
+  int _ = 0;
+  while(fgets(buffer, sizeof(buffer), f) != NULL)
   {
-    File *f = FILE *f = fopen("/workspace/zhanghongxiang/cJSON/myout/hotmem/"+&ptr[i], "a");
-    if (!f) {PFATAL("fdopen() failed");}
-    char buffer[1000];
-    int _ = 0;
-    while(!feof(f))
+    if(buffer == stack_hash_map)
     {
-      fgets(buffer , 1000 , f);
-      if(buffer == &ptr[i])
-      {
-        _++;
-        break;
-      }
+      _++;
+      break;
     }
-
-    if(_ == 0)
-    {
-      trace_score *= 1.5;
-      fprintf(f, "%s\n", &ptr[i]);
-    }
-    else
-    {trace_score *= 0.75;}
-    fclose(f);
-
   }
-*/
+  if(_ == 0)
+  {
+    trace_score *= 1.5;
+    fprintf(f, "%s\n", stack_hash_map);
+  }
+  else
+  {
+    trace_score *= 0.75;
+    printf("trace_score!");
+  }
+  fclose(f);
+
 
   /* Adjust score based on execution speed of this path, compared to the
      global average. Multiplier ranges from 0.1x to 3x. Fast inputs are
@@ -1217,7 +1255,7 @@ u32 calculate_score(afl_state_t *afl, struct queue_entry *q) {
 
   }
   u32 __ = trace_score;
-  if(ROUND <10000)
+  if(HNB < 0)
     return perf_score;
   else
     return __;
