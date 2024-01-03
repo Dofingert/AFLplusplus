@@ -45,6 +45,26 @@
 extern u64 time_spent_working;
 #endif
 
+static void *helper_open_shm(int shm_key, int *create, void *location, size_t filesize)
+{
+  int shm_id = -1, shm_flag = 0;
+  while (1)
+  {
+    shm_id = shmget(shm_key, filesize, shm_flag);
+    if (shm_id >= 0)
+      break;
+    if (ENOENT != errno || *create == 0)
+    {
+      printf("Can not open shared memory 0x%x, errno %d\n", shm_key, errno);
+      return NULL;
+    }
+    shm_flag = IPC_CREAT | 0660;
+    *create = 0;
+  }
+  return shmat(shm_id, location, 0);
+}
+
+
 static void at_exit() {
 
   s32   i, pid1 = 0, pid2 = 0, pgrp = -1;
@@ -2185,8 +2205,9 @@ int main(int argc, char **argv_orig, char **envp) {
   afl->fsrv.trace_bits =
       afl_shm_init(&afl->shm, afl->fsrv.map_size, afl->non_instrumented_mode);
 
+  int create = 1;
   int shmid = shmget(1229, 32*32*1024*8, IPC_CREAT | IPC_EXCL | DEFAULT_PERMISSION);
-  afl->fsrv.register_bits = shmat(1229, 0, 0);
+  afl->fsrv.register_bits = helper_open_shm(1229, &create, NULL, 32*1024*32 * 8);
 
 
   if (!afl->non_instrumented_mode && !afl->fsrv.qemu_mode &&

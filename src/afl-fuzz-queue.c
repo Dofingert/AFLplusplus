@@ -950,8 +950,8 @@ u32 calculate_score(afl_state_t *afl, struct queue_entry *q) {
   arr=(int*)calloc(size,sizeof(int));
   */
   int create = 1;
-  u8* stack_hash_map = helper_open_shm(1229, &create, NULL, TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * 8);
-  //printf("%s",&stack_hash_map);
+  u8* stack_hash_map = afl->fsrv.register_bits;
+    //printf("%s",&stack_hash_map);
 
   //free(arr);
 
