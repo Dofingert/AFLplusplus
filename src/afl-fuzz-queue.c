@@ -962,7 +962,7 @@ u32 calculate_score(afl_state_t *afl, struct queue_entry *q) {
   int _ = 0;
   while(fgets(buffer, sizeof(buffer), f) != NULL)
   {
-    if(buffer == stack_hash_map)
+    if(memcmp(buffer, stack_hash_map, 256) == 0)
     {
       _++;
       break;
