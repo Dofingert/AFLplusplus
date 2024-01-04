@@ -2210,7 +2210,7 @@ int main(int argc, char **argv_orig, char **envp) {
   int shmid = shmget(1229, TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * 8, IPC_CREAT | IPC_EXCL | DEFAULT_PERMISSION);
   afl->fsrv.shm_register_bits = helper_open_shm(1229, &create, NULL, TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * 8);
   afl->fsrv.history_register_bits = malloc(TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * 8 * MAX_RECORD_HISTORY_SIZE);
-
+  
 
   if (!afl->non_instrumented_mode && !afl->fsrv.qemu_mode &&
       !afl->unicorn_mode && !afl->fsrv.frida_mode && !afl->fsrv.cs_mode &&

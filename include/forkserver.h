@@ -201,6 +201,7 @@ typedef struct afl_forkserver {
   char                 *nyx_tmp_workdir_path;
   s32                   nyx_log_fd;
 #endif
+  u32  valid_history_cnt;
   u64* shm_register_bits;
   u64* history_register_bits;
 } afl_forkserver_t;

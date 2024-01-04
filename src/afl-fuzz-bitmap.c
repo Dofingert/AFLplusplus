@@ -633,9 +633,10 @@ void init_km() {
    save or queue the input test case for further analysis if so. Returns 1 if
    entry is saved, 0 otherwise. */
 u8 gen_mode = 0; // 0 for exploration, 1 for generating.
-double avg_byte_cnt = 0.f;
+double avg_diff_value = 0.f;
 char filename_buf[4096];
 u32 input_cnt = 0;
+extern evaluate_diff(u64* new_inputs, u64* ref_set, u32 test_cnt);
 u8 __attribute__((hot))
 save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
@@ -655,7 +656,9 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     gen_mode = 1;
     printf("GENMODE!");
   }
-
+  float diff_score = evaluate_diff(afl->fsrv.shm_register_bits
+                                                ,afl->fsrv.history_register_bits
+                                                ,afl->fsrv.valid_history_cnt);
   if(gen_mode) {
     u64 avg_us;
     static double avg_k = 1.5;
@@ -665,9 +668,12 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     }
     u64 now_time_ms = get_cur_time();
     u64 diff_time = now_time_ms - last_seen_ms;
-    if(avg_byte_cnt * avg_k < count_non_255_bytes(afl, afl->fsrv.trace_bits)) {
+    if(avg_diff_value * avg_k < diff_score) {
     // if(avg_us * 10 < afl->last_us) {
        // Valid test input.
+        save_stacktrace(afl->fsrv.shm_register_bits
+                                                ,afl->fsrv.history_register_bits
+                                                ,afl->fsrv.valid_history_cnt++);
         snprintf(filename_buf, 4095, "%s/queue/gen_%06u", afl->out_dir, ++valid_input_cnt);
         int fd = open(filename_buf, O_WRONLY | O_CREAT | O_EXCL, DEFAULT_PERMISSION);
         if (unlikely(fd < 0)) { PFATAL("Unable to create '%s'", filename_buf); }
@@ -785,8 +791,16 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     add_to_queue(afl, queue_fn, len, 0);
     // bitmap_set->elem_cnt += 1;
     // belonging_set->elem_cnt += 1;
-    avg_byte_cnt = (avg_byte_cnt * input_cnt + count_bytes(afl, afl->fsrv.trace_bits)) / (input_cnt + 1);
+    /* QM2: calculate average diff. */
+    avg_diff_value = (
+      avg_diff_value * input_cnt + diff_score
+      ) / (input_cnt + 1);
+    // avg_diff_value = (avg_diff_value * input_cnt + count_bytes(afl, afl->fsrv.trace_bits)) / (input_cnt + 1);
     input_cnt = input_cnt + 1;
+    
+    save_stacktrace(afl->fsrv.shm_register_bits
+                                            ,afl->fsrv.history_register_bits
+                                            ,afl->fsrv.valid_history_cnt++);
     no_found_cnt = 0;
 
     if (unlikely(afl->fuzz_mode) &&
