@@ -4,7 +4,7 @@
 #define TRACE_HISTORY_TABLE_SIZE 32 * 1024
 #define TRACE_HISTORY_LENGTH 32
 
-uint64_t *stack_hash_map = NULL; // 为每一个 block id 分配 32 bytes trace history，共计 2 M
+uint64_t *stack_hash_map = NULL; // 为每一个 func id 分配 32 bytes trace history，共计 2 M
 uint64_t fse, fsb;
 
 #include <unistd.h>
@@ -40,7 +40,7 @@ static void *helper_open_shm(int shm_key, int *create, void *location, size_t fi
 
 int __afl_err;
 
-void __afl_stack_log(int block_id)
+void __afl_stack_log(int func_id)
 {
     // 获取父函数栈区结束位置 == rbp + 8
     uint64_t *father_stack_end;
@@ -49,6 +49,7 @@ void __afl_stack_log(int block_id)
     :/* inputs */
     :/**/);
     // 获取父函数栈区开始位置 == *rbp
+    father_stack_end = *(uint64_t**)father_stack_end;
     uint64_t *father_stack_begin = *(uint64_t**)father_stack_end;
     father_stack_end += 1;
 
@@ -60,13 +61,14 @@ void __afl_stack_log(int block_id)
             __afl_err = 1;
             return;
         }
+        memset(stack_hash_map,0,TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * 8);
     }
 
     int iter = 0;
     fsb = father_stack_begin;
     fse = father_stack_end;
     for(uint64_t* xor_ptr = father_stack_end; xor_ptr != father_stack_begin ; xor_ptr += 1) {
-        stack_hash_map[(block_id % TRACE_HISTORY_TABLE_SIZE) * TRACE_HISTORY_LENGTH + iter] ^= *xor_ptr;
+        stack_hash_map[(func_id % TRACE_HISTORY_TABLE_SIZE) * TRACE_HISTORY_LENGTH + iter] ^= *xor_ptr;
         iter++;
         iter %= TRACE_HISTORY_LENGTH;
     }
@@ -83,10 +85,12 @@ int main_wrapper(int argc) {
 
 int main(int argc, char *argv[]) {
     main_wrapper(argc);
-    for(int i = 0 ; i < TRACE_HISTORY_LENGTH ; i++) {
-        printf("%16llx ", stack_hash_map[i]);
-        if(i % 4 == 3) {
-            putchar('\n');
+    if(stack_hash_map != NULL) {
+        for(int i = 0 ; i < TRACE_HISTORY_LENGTH ; i++) {
+            printf("%16llx ", stack_hash_map[i]);
+            if(i % 4 == 3) {
+                putchar('\n');
+            }
         }
     }
     printf("%d", __afl_err);
