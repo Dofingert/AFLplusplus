@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define TRACE_HISTORY_TABLE_SIZE 32 * 1024
-#define TRACE_HISTORY_LENGTH 32
+#define TRACE_HISTORY_TABLE_SIZE (32 * 1024)
+#define TRACE_HISTORY_LENGTH (8)
 
 uint64_t *stack_hash_map = NULL; // 为每一个 func id 分配 32 bytes trace history，共计 2 M
 uint64_t fse, fsb;
@@ -42,6 +42,7 @@ int __afl_err;
 
 void __afl_stack_log(int func_id)
 {
+    // printf("func_id: %d\n", func_id);
     // 获取父函数栈区结束位置 == rbp + 8
     uint64_t *father_stack_end;
     asm("movq %%rbp, %0"
@@ -52,6 +53,7 @@ void __afl_stack_log(int func_id)
     father_stack_end = *(uint64_t**)father_stack_end;
     uint64_t *father_stack_begin = *(uint64_t**)father_stack_end;
     father_stack_end += 1;
+    // printf("from 0x%p to 0x%p\n", father_stack_begin, father_stack_end);
 
     // 初始化共享内存
     if(stack_hash_map == NULL) {
@@ -86,7 +88,7 @@ int main_wrapper(int argc) {
 int main(int argc, char *argv[]) {
     main_wrapper(argc);
     if(stack_hash_map != NULL) {
-        for(int i = 0 ; i < TRACE_HISTORY_LENGTH ; i++) {
+        for(int i = 0 ; i < TRACE_HISTORY_LENGTH * 4 ; i++) {
             printf("%16llx ", stack_hash_map[i]);
             if(i % 4 == 3) {
                 putchar('\n');
