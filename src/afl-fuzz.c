@@ -24,6 +24,7 @@
  */
 
 #include "afl-fuzz.h"
+#include "stack_param.h"
 #include "cmplog.h"
 #include "common.h"
 #include <limits.h>
@@ -2206,8 +2207,9 @@ int main(int argc, char **argv_orig, char **envp) {
       afl_shm_init(&afl->shm, afl->fsrv.map_size, afl->non_instrumented_mode);
 
   int create = 1;
-  int shmid = shmget(1229, 32*32*1024*8, IPC_CREAT | IPC_EXCL | DEFAULT_PERMISSION);
-  afl->fsrv.register_bits = helper_open_shm(1229, &create, NULL, 32*1024*32 * 8);
+  int shmid = shmget(1229, TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * 8, IPC_CREAT | IPC_EXCL | DEFAULT_PERMISSION);
+  afl->fsrv.shm_register_bits = helper_open_shm(1229, &create, NULL, TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * 8);
+  afl->fsrv.history_register_bits = malloc(TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * 8 * MAX_RECORD_HISTORY_SIZE);
 
 
   if (!afl->non_instrumented_mode && !afl->fsrv.qemu_mode &&

@@ -152,7 +152,7 @@ static const u8 *trampoline_fmt_64 =
     "movq $0x%08x, %%rcx\n"
     "call __afl_maybe_log\n"
     "xorq %%rax, %%rax\n"
-    "call __afl_stack_log\n"
+    // "call __afl_stack_log\n"
     "movq 64(%%rsp), %%rcx\n"
     "movq 56(%%rsp), %%rdx\n"
     "movq 48(%%rsp), %%r8 \n"

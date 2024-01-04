@@ -539,7 +539,7 @@ static void add_instrumentation(void) {
                getenv("AFL_USE_UBSAN") ? ", UBSAN" : "",
                getenv("AFL_USE_LSAN") ? ", LSAN" : "");
 
-      OKF("Instrumented %u locations (%s-bit, %s mode, ratio %u%%).", ins_lines,
+      OKF("as Instrumented %u locations (%s-bit, %s mode, ratio %u%%).", ins_lines,
           use_64bit ? "64" : "32", modeline, inst_ratio);
 
     }

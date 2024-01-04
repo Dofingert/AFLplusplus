@@ -41,9 +41,6 @@
 #define TRACE_HISTORY_TABLE_SIZE 32 * 1024
 #define TRACE_HISTORY_LENGTH 32
 
-int ROUND = 0;
-int HNB = 1000;
-
 static void *helper_open_shm(int shm_key, int *create, void *location, size_t filesize)
 {
   int shm_id = -1, shm_flag = 0;
@@ -939,47 +936,10 @@ u32 calculate_score(afl_state_t *afl, struct queue_entry *q) {
   u32 avg_bitmap_size = afl->total_bitmap_size / bitmap_entries;
   u32 perf_score = 100;
   float trace_score = 100;
-  u8 hnb = 0;
-  hnb = has_new_bits(afl, afl->virgin_bits);
-  HNB--;
-  if(hnb) HNB = 1000;
 
-  /*
-  int *arr=NULL,*new_arr=NULL,size,new_size;
-  size = 1000;
-  arr=(int*)calloc(size,sizeof(int));
-  */
-  int create = 1;
-  u8* stack_hash_map = afl->fsrv.register_bits;
-    //printf("%s",&stack_hash_map);
-
-  //free(arr);
-
-  FILE *f = fopen("/workspace/zhanghongxiang/cJSON/myout/hotmem/hash.txt", "a");
-  if (!f) {PFATAL("fdopen() failed");}
-  char buffer[256];
-
-  int _ = 0;
-  while(fgets(buffer, sizeof(buffer), f) != NULL)
-  {
-    if(memcmp(buffer, stack_hash_map, 256) == 0)
-    {
-      _++;
-      break;
-    }
-  }
-  if(_ == 0)
-  {
-    trace_score *= 1.5;
-    fprintf(f, "%s\n", stack_hash_map);
-  }
-  else
-  {
-    trace_score *= 0.75;
-    printf("trace_score!");
-  }
-  fclose(f);
-
+  // 开始检查目前的 trace map 与历史相似度，并进行判分。
+  // 检查方式使用一个 hashmap，存储 hash<stack_trace_block> -> <cnt>
+  // 
 
   /* Adjust score based on execution speed of this path, compared to the
      global average. Multiplier ranges from 0.1x to 3x. Fast inputs are
@@ -1254,12 +1214,7 @@ u32 calculate_score(afl_state_t *afl, struct queue_entry *q) {
     perf_score = afl->havoc_max_mult * 100;
 
   }
-  u32 __ = trace_score;
-  if(HNB < 0)
-    return perf_score;
-  else
-    return __;
-
+  return perf_score;
 }
 
 /* after a custom trim we need to reload the testcase from disk */

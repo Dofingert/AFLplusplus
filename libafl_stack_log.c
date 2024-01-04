@@ -4,7 +4,7 @@
 #include "include/stack_param.h"
 
 uint64_t *stack_hash_map = NULL; // 为每一个 func id 分配 32 bytes trace history，共计 2 M
-uint64_t fse, fsb;
+uint64_t fsb;
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -51,8 +51,11 @@ void __afl_stack_log(unsigned int func_id)
     :/**/);
     // 获取父函数栈区开始位置 == *rbp
     father_stack_end = *(uint64_t**)father_stack_end;
-    uint64_t *father_stack_begin = *(uint64_t**)father_stack_end;
-    father_stack_end += 1;
+    uint64_t *father_ra = *(((uint64_t**)father_stack_end) + 1);
+    uint64_t ra_id = (uint64_t)father_ra ^ ((uint64_t)father_ra >> 16);
+    // printf("%d %d ra: %p\n", func_id, lfunc_id, father_ra);
+    uint64_t *father_stack_begin = (*(uint64_t**)father_stack_end) - 1;
+    father_stack_end += 2; // 排除 ra 及 rbp 影响
     // printf("from 0x%p to 0x%p\n", father_stack_begin, father_stack_end);
 
     // 初始化共享内存
@@ -67,10 +70,9 @@ void __afl_stack_log(unsigned int func_id)
     }
 
     int iter = 0;
-    fsb = father_stack_begin;
-    fse = father_stack_end;
+    fsb = (ra_id % TRACE_HISTORY_TABLE_SIZE) * TRACE_HISTORY_LENGTH;
     for(uint64_t* xor_ptr = father_stack_end; xor_ptr != father_stack_begin ; xor_ptr += 1) {
-        stack_hash_map[(lfunc_id % TRACE_HISTORY_TABLE_SIZE) * TRACE_HISTORY_LENGTH + iter] ^= *xor_ptr;
+        stack_hash_map[(ra_id % TRACE_HISTORY_TABLE_SIZE) * TRACE_HISTORY_LENGTH + iter] = *xor_ptr;
         iter++;
         iter %= TRACE_HISTORY_LENGTH;
     }
@@ -84,12 +86,12 @@ extern int main_wrapper(int argc, char* argv[]);
 int main(int argc, char *argv[]) {
     main_wrapper(argc, argv);
     if(stack_hash_map != NULL) {
-        for(int i = 0 ; i < TRACE_HISTORY_LENGTH * 4 ; i++) {
-            printf("%16llx ", stack_hash_map[i]);
+        for(int i = 0 ; i < TRACE_HISTORY_LENGTH ; i++) {
+            printf("%16llx ", stack_hash_map[fsb+i]);
             if(i % 4 == 3) {
                 putchar('\n');
             }
         }
     }
-    printf("%d", __afl_err);
+    printf("%x %d\n", fsb, __afl_err);
 }

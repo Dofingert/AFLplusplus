@@ -1,0 +1,10 @@
+#ifndef __HEADER_STACK_PARAM
+#define __HEADER_STACK_PARAM
+
+// 4M per trace
+
+#define TRACE_HISTORY_TABLE_SIZE (32 * 1024)
+#define TRACE_HISTORY_LENGTH (16)
+#define MAX_RECORD_HISTORY_SIZE (1024)
+
+#endif
