@@ -599,7 +599,7 @@ void ModuleSanitizerCoverageAFL::instrumentFunction(
   bool                     IsLeafFunc = true;
 
     /* QM2: define an global function id for every function we met. */
-  static unsigned int cur_func = 0;(/*TRACE_HISTORY_TABLE_SIZE*/ 32 * 1024);
+  static unsigned int cur_func = 0;
   Constant *CurFunc = ConstantInt::get(Int32Ty, cur_func++);
   for (auto &BB : F) {
     
