@@ -636,9 +636,15 @@ u8 gen_mode = 0; // 0 for exploration, 1 for generating.
 double avg_diff_value = 0.f;
 char filename_buf[4096];
 u32 input_cnt = 0;
+u64* history_register_bits;
+#include "stack_param.h"
 extern evaluate_diff(u64* new_inputs, u64* ref_set, u32 test_cnt);
 u8 __attribute__((hot))
 save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
+
+  if(unlikely(history_register_bits == NULL)) {
+    history_register_bits = malloc(TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * MAX_RECORD_HISTORY_SIZE * 8);
+  }
 
   if(unlikely(!initialized)) {
     vec_elem_cnt = afl->shm.map_size;
@@ -657,8 +663,8 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     printf("GENMODE!");
   }
   float diff_score = evaluate_diff(afl->fsrv.shm_register_bits
-                                                ,afl->fsrv.history_register_bits
-                                                ,afl->fsrv.valid_history_cnt);
+                                  ,history_register_bits
+                                  ,afl->fsrv.valid_history_cnt);
   if(gen_mode) {
     u64 avg_us;
     static double avg_k = 1.5;
@@ -672,8 +678,8 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     // if(avg_us * 10 < afl->last_us) {
        // Valid test input.
         save_stacktrace(afl->fsrv.shm_register_bits
-                                                ,afl->fsrv.history_register_bits
-                                                ,afl->fsrv.valid_history_cnt++);
+                       ,history_register_bits
+                       ,afl->fsrv.valid_history_cnt++);
         snprintf(filename_buf, 4095, "%s/queue/gen_%06u", afl->out_dir, ++valid_input_cnt);
         int fd = open(filename_buf, O_WRONLY | O_CREAT | O_EXCL, DEFAULT_PERMISSION);
         if (unlikely(fd < 0)) { PFATAL("Unable to create '%s'", filename_buf); }
@@ -799,8 +805,8 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     input_cnt = input_cnt + 1;
     
     save_stacktrace(afl->fsrv.shm_register_bits
-                                            ,afl->fsrv.history_register_bits
-                                            ,afl->fsrv.valid_history_cnt++);
+                   ,history_register_bits
+                   ,afl->fsrv.valid_history_cnt++);
     no_found_cnt = 0;
 
     if (unlikely(afl->fuzz_mode) &&
