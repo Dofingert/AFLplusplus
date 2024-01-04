@@ -1,8 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define TRACE_HISTORY_TABLE_SIZE (32 * 1024)
-#define TRACE_HISTORY_LENGTH (8)
+#include "include/stack_param.h"
 
 uint64_t *stack_hash_map = NULL; // 为每一个 func id 分配 32 bytes trace history，共计 2 M
 uint64_t fse, fsb;
@@ -40,10 +39,11 @@ static void *helper_open_shm(int shm_key, int *create, void *location, size_t fi
 
 int __afl_err;
 
-void __afl_stack_log(int func_id)
+void __afl_stack_log(unsigned int func_id)
 {
     // printf("func_id: %d\n", func_id);
     // 获取父函数栈区结束位置 == rbp + 8
+    static unsigned int lfunc_id = 0;
     uint64_t *father_stack_end;
     asm("movq %%rbp, %0"
     : "=r"(father_stack_end)/* output */
@@ -70,23 +70,19 @@ void __afl_stack_log(int func_id)
     fsb = father_stack_begin;
     fse = father_stack_end;
     for(uint64_t* xor_ptr = father_stack_end; xor_ptr != father_stack_begin ; xor_ptr += 1) {
-        stack_hash_map[(func_id % TRACE_HISTORY_TABLE_SIZE) * TRACE_HISTORY_LENGTH + iter] ^= *xor_ptr;
+        stack_hash_map[(lfunc_id % TRACE_HISTORY_TABLE_SIZE) * TRACE_HISTORY_LENGTH + iter] ^= *xor_ptr;
         iter++;
         iter %= TRACE_HISTORY_LENGTH;
     }
+    lfunc_id = func_id;
 }
 
 extern int fb(int n);
 
-int main_wrapper(int argc) {
-    for (int i = 0 ; i < argc ; i ++) {
-        // printf("%3d %16p %16p\n", fb(i), fsb, fse);
-        fb(i);
-    }
-}
+extern int main_wrapper(int argc, char* argv[]);
 
 int main(int argc, char *argv[]) {
-    main_wrapper(argc);
+    main_wrapper(argc, argv);
     if(stack_hash_map != NULL) {
         for(int i = 0 ; i < TRACE_HISTORY_LENGTH * 4 ; i++) {
             printf("%16llx ", stack_hash_map[i]);
