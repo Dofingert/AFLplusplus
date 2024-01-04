@@ -81,10 +81,7 @@ void __afl_stack_log(unsigned int func_id)
 
 extern int fb(int n);
 
-extern int main_wrapper(int argc, char* argv[]);
-
-int main(int argc, char *argv[]) {
-    main_wrapper(argc, argv);
+void __afl_stack_call_back() {
     if(stack_hash_map != NULL) {
         for(int i = 0 ; i < TRACE_HISTORY_LENGTH ; i++) {
             printf("%16llx ", stack_hash_map[fsb+i]);

@@ -14,7 +14,9 @@ int fb(int n) {
     return fb2(n - 1) + fb2(n - 2);
 }
 
-int main_wrapper(int argc, char* argv[])
+extern void __afl_stack_call_back();
+
+int main(int argc, char* argv[])
 {
     if(argc != 2 || (argv[1][0] > '9' || argv[1][0] < '0')
                  || (argv[1][1] > '9' || argv[1][1] < '0')) {
@@ -25,4 +27,6 @@ int main_wrapper(int argc, char* argv[])
     printf("n is %d\n",n);
     fb(n);
     fb2(n);
+    __afl_stack_call_back();
+    return 0;
 }

@@ -2658,6 +2658,7 @@ void __afl_set_persistent_mode(u8 mode) {
 }
 
 
+/* QM2 BEGIN */
 
 #include <stdint.h>
 #include <stdio.h>
@@ -2711,11 +2712,16 @@ void __afl_stack_log(unsigned int func_id)
     :/* inputs */
     :/**/);
     // 获取父函数栈区开始位置 == *rbp
-    father_stack_end = *(uint64_t**)father_stack_end;
+    // printf("pointer is %p\n", father_stack_end);
+    // 注意，这里 afl 并没有为叶函数保证一定保存 rsp，所以 __afl_stack_log 实际并没有将自己的 rsp 推入 rbp
+    // 因此少了下面的这一次解引用
+    // father_stack_end = *(uint64_t**)father_stack_end;
     uint64_t *father_ra = *(((uint64_t**)father_stack_end) + 1);
     uint64_t ra_id = (uint64_t)father_ra ^ ((uint64_t)father_ra >> 16);
     // printf("%d %d ra: %p\n", func_id, lfunc_id, father_ra);
-    uint64_t *father_stack_begin = (*(uint64_t**)father_stack_end) - 1;
+    uint64_t *father_stack_begin = (*(uint64_t**)father_stack_end);
+    // printf("pointer is %p\n", (uint64_t**)father_stack_end);
+    // printf("pointer is %p\n", father_stack_begin);
     father_stack_end += 2; // 排除 ra 及 rbp 影响
     // printf("from 0x%p to 0x%p\n", father_stack_begin, father_stack_end);
 
@@ -2738,6 +2744,20 @@ void __afl_stack_log(unsigned int func_id)
         iter %= TRACE_HISTORY_LENGTH;
     }
     lfunc_id = func_id;
+}
+
+extern int fb(int n);
+
+void __afl_stack_call_back() {
+    if(stack_hash_map != NULL) {
+        for(int i = 0 ; i < TRACE_HISTORY_LENGTH ; i++) {
+            printf("%16llx ", stack_hash_map[fsb+i]);
+            if(i % 4 == 3) {
+                putchar('\n');
+            }
+        }
+    }
+    printf("%x %d\n", fsb, __afl_err);
 }
 
 #undef write_error
