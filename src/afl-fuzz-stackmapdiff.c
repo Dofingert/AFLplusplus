@@ -32,6 +32,7 @@ void save_stacktrace(u64* new_inputs, u64* ref_set, u32 test_cnt)
 {
     test_cnt = test_cnt % MAX_RECORD_HISTORY_SIZE;
     for(int i = 0 ; i < TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH ; i++) {
+        printf("%p %p\n",&ref_set[i * MAX_RECORD_HISTORY_SIZE + test_cnt], &new_inputs[i]);
         ref_set[i * MAX_RECORD_HISTORY_SIZE + test_cnt] = new_inputs[i];
     }
 }
