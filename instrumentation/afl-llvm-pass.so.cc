@@ -215,6 +215,7 @@ bool AFLCoverage::runOnModule(Module &M) {
   struct timezone tz;
   u32             rand_seed;
   unsigned int    cur_loc = 0;
+  unsigned int    cur_func = 0;
 
 #if LLVM_VERSION_MAJOR >= 11                        /* use new pass manager */
   auto PA = PreservedAnalyses::all();
@@ -521,6 +522,9 @@ bool AFLCoverage::runOnModule(Module &M) {
   scanForDangerousFunctions(&M);
 
   for (auto &F : M) {
+    /* QM2: define an global function id for every function we met. */
+    cur_func = AFL_R(/*TRACE_HISTORY_TABLE_SIZE*/ 32 * 1024);
+    ConstantInt *CurFunc = ConstantInt::get(Int32Ty, cur_func);
 
     int has_calls = 0;
     if (debug)
@@ -536,6 +540,12 @@ bool AFLCoverage::runOnModule(Module &M) {
 
       BasicBlock::iterator IP = BB.getFirstInsertionPt();
       IRBuilder<>          IRB(&(*IP));
+
+      /* QM2: Insert call to function __afl_stack_log to record all stack info. */
+      if(&BB == &F.getEntryBlock()) {
+        OKF("Found entry points.\n");
+        IRB.CreateCall(StackLogFunc, CurFunc)->setCannotMerge();
+      }
 
       // Context sensitive coverage
       if (instrument_ctx && &BB == &F.getEntryBlock()) {
@@ -841,15 +851,6 @@ bool AFLCoverage::runOnModule(Module &M) {
 
       /* Update prev_loc history vector (by placing cur_loc at the head of the
          vector and shuffle the other elements back by one) */
-      }
-
-      /* QM2: Call __afl_stack_log here to save all stack infomation */
-      // IRB.CreateCall(StackLogFunc, CurLoc)
-#if LLVM_VERSION_MAJOR >= 12
-        ->setCannotMerge();
-#else
-        ->cannotMerge();
-#endif
 
       StoreInst *Store;
 
@@ -1088,7 +1089,7 @@ bool AFLCoverage::runOnModule(Module &M) {
                getenv("AFL_USE_CFISAN") ? ", CFISAN" : "",
                getenv("AFL_USE_TSAN") ? ", TSAN" : "",
                getenv("AFL_USE_UBSAN") ? ", UBSAN" : "");
-      OKF("Instrumented %d locations (%s mode, ratio %u%%).", inst_blocks,
+      OKF("LLVM Instrumented %d locations (%s mode, ratio %u%%).", inst_blocks,
           modeline, inst_ratio);
 
     }
@@ -1117,4 +1118,3 @@ static RegisterStandardPasses RegisterAFLPass(
 static RegisterStandardPasses RegisterAFLPass0(
     PassManagerBuilder::EP_EnabledOnOptLevel0, registerAFLPass);
 #endif
-

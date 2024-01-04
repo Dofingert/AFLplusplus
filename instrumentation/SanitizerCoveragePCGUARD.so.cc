@@ -139,7 +139,7 @@ class ModuleSanitizerCoverageAFL
 
  private:
   void instrumentFunction(Function &F, DomTreeCallback DTCallback,
-                          PostDomTreeCallback PDTCallback);
+                          PostDomTreeCallback PDTCallback, FunctionCallee &StackLogFunc);
   void InjectTraceForCmp(Function &F, ArrayRef<Instruction *> CmpTraceTargets);
   void InjectTraceForSwitch(Function               &F,
                             ArrayRef<Instruction *> SwitchTraceTargets);
@@ -422,8 +422,10 @@ bool ModuleSanitizerCoverageAFL::instrumentModule(
   SanCovTracePCGuard =
       M.getOrInsertFunction(SanCovTracePCGuardName, VoidTy, Int32PtrTy);
 
+  FunctionCallee StackLogFunc;
+  StackLogFunc = M.getOrInsertFunction("__afl_stack_log", VoidTy, Int32Ty); // void __afl_stack_log(int32_t map_id);
   for (auto &F : M)
-    instrumentFunction(F, DTCallback, PDTCallback);
+    instrumentFunction(F, DTCallback, PDTCallback, StackLogFunc);
 
   Function *Ctor = nullptr;
 
@@ -457,7 +459,7 @@ bool ModuleSanitizerCoverageAFL::instrumentModule(
                getenv("AFL_USE_TSAN") ? ", TSAN" : "",
                getenv("AFL_USE_CFISAN") ? ", CFISAN" : "",
                getenv("AFL_USE_UBSAN") ? ", UBSAN" : "");
-      OKF("Instrumented %u locations with no collisions (%s mode) of which are "
+      OKF("LLVMPC Instrumented %u locations with no collisions (%s mode) of which are "
           "%u handled and %u unhandled selects.",
           instr, modeline, selects, unhandled);
 
@@ -562,7 +564,7 @@ static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree *DT,
 #endif
 
 void ModuleSanitizerCoverageAFL::instrumentFunction(
-    Function &F, DomTreeCallback DTCallback, PostDomTreeCallback PDTCallback) {
+    Function &F, DomTreeCallback DTCallback, PostDomTreeCallback PDTCallback, FunctionCallee &StackLogFunc) {
 
   if (F.empty()) return;
   if (!isInInstrumentList(&F, FMNAME)) return;
@@ -596,10 +598,20 @@ void ModuleSanitizerCoverageAFL::instrumentFunction(
   const PostDominatorTree *PDT = PDTCallback(F);
   bool                     IsLeafFunc = true;
 
+    /* QM2: define an global function id for every function we met. */
+  static unsigned int cur_func = 0;(/*TRACE_HISTORY_TABLE_SIZE*/ 32 * 1024);
+  Constant *CurFunc = ConstantInt::get(Int32Ty, cur_func++);
   for (auto &BB : F) {
-
+    
     if (shouldInstrumentBlock(F, &BB, DT, PDT, Options))
       BlocksToInstrument.push_back(&BB);
+    /* QM2: Insert call to function __afl_stack_log to record all stack info. */
+    if(&BB == &F.getEntryBlock()) {
+      BasicBlock::iterator IP = BB.getFirstInsertionPt();
+      IRBuilder<>          IRB(&(*IP));
+      OKF("Found entry points.\n");
+      IRB.CreateCall(StackLogFunc, CurFunc)->setCannotMerge();
+    }
     /*
         for (auto &Inst : BB) {
 

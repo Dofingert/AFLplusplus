@@ -1152,7 +1152,7 @@ bool ModuleSanitizerCoverageLTO::instrumentModule(
                getenv("AFL_USE_TSAN") ? ", TSAN" : "",
                getenv("AFL_USE_CFISAN") ? ", CFISAN" : "",
                getenv("AFL_USE_UBSAN") ? ", UBSAN" : "");
-      OKF("Instrumented %u locations (%u selects) without collisions (%llu "
+      OKF("lto Instrumented %u locations (%u selects) without collisions (%llu "
           "collisions have been avoided) (%s mode).",
           inst, select_cnt, calculateCollisions(inst), modeline);
 
