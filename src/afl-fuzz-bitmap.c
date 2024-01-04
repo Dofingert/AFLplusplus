@@ -643,7 +643,8 @@ u8 __attribute__((hot))
 save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
 
   if(unlikely(history_register_bits == NULL)) {
-    history_register_bits = malloc(TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * MAX_RECORD_HISTORY_SIZE * 8);
+    printf("size is %llx\n",(size_t)TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * MAX_RECORD_HISTORY_SIZE * 8);
+    history_register_bits = malloc((size_t)TRACE_HISTORY_TABLE_SIZE * TRACE_HISTORY_LENGTH * MAX_RECORD_HISTORY_SIZE * 8);
   }
 
   if(unlikely(!initialized)) {
