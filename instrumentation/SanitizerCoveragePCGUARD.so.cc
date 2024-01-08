@@ -606,7 +606,7 @@ void ModuleSanitizerCoverageAFL::instrumentFunction(
     if (shouldInstrumentBlock(F, &BB, DT, PDT, Options))
       BlocksToInstrument.push_back(&BB);
     /* QM2: Insert call to function __afl_stack_log to record all stack info. */
-    if(&BB == &F.getEntryBlock() && F.getName() != "main") {
+    if(&BB == &F.getEntryBlock() && F.getName() != "main" && (F.getName() == "cJSON_ParseWithOpts" || F.getName() == "cJSON_ParseWithLengthOpts" || F.getName() == "cJSON_Print")) {
       BasicBlock::iterator IP = BB.getFirstInsertionPt();
       IRBuilder<>          IRB(&(*IP));
       OKF("Found entry points.\n");
