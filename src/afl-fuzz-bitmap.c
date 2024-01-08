@@ -663,9 +663,7 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     gen_mode = 1;
     printf("GENMODE!");
   }
-  float diff_score = evaluate_diff(afl->fsrv.shm_register_bits
-                                  ,history_register_bits
-                                  ,afl->fsrv.valid_history_cnt);
+  float diff_score;
   if(gen_mode) {
     u64 avg_us;
     static double avg_k = 1.5;
@@ -675,6 +673,9 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     }
     u64 now_time_ms = get_cur_time();
     u64 diff_time = now_time_ms - last_seen_ms;
+    diff_score = evaluate_diff(afl->fsrv.shm_register_bits
+                                  ,history_register_bits
+                                  ,afl->fsrv.valid_history_cnt);
     if(avg_diff_value * avg_k < diff_score) {
     // if(avg_us * 10 < afl->last_us) {
        // Valid test input.
@@ -799,6 +800,9 @@ save_if_interesting(afl_state_t *afl, void *mem, u32 len, u8 fault) {
     // bitmap_set->elem_cnt += 1;
     // belonging_set->elem_cnt += 1;
     /* QM2: calculate average diff. */
+    diff_score = evaluate_diff(afl->fsrv.shm_register_bits
+                                  ,history_register_bits
+                                  ,afl->fsrv.valid_history_cnt);
     avg_diff_value = (
       avg_diff_value * input_cnt + diff_score
       ) / (input_cnt + 1);
