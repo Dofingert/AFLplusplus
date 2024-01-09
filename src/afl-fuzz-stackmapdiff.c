@@ -25,6 +25,7 @@ float evaluate_diff(u64* new_inputs, u64* ref_set, u32 test_cnt)
         }
         diff_score += min_distance;
     }
+    printf("DIFF VALUE IS %f\n", diff_score);
     return diff_score;
 }
 
