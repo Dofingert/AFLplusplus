@@ -2760,4 +2760,9 @@ void __afl_stack_call_back() {
     printf("%x %d\n", fsb, __afl_err);
 }
 
+void *__afl_stack_call_back_get_mem(u64* map_size) {
+    *map_size = TRACE_HISTORY_LENGTH * TRACE_HISTORY_TABLE_SIZE * 8;
+    return stack_hash_map;
+}
+
 #undef write_error
