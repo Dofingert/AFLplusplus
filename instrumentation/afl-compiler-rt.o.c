@@ -2739,7 +2739,7 @@ void __afl_stack_log(unsigned int func_id)
     int iter = 0;
     fsb = (ra_id % TRACE_HISTORY_TABLE_SIZE) * TRACE_HISTORY_LENGTH;
     for(uint64_t* xor_ptr = father_stack_end; xor_ptr != father_stack_begin ; xor_ptr += 1) {
-        stack_hash_map[(ra_id % TRACE_HISTORY_TABLE_SIZE) * TRACE_HISTORY_LENGTH + iter] = *xor_ptr;
+        stack_hash_map[(ra_id % TRACE_HISTORY_TABLE_SIZE) * TRACE_HISTORY_LENGTH + iter] ^= *xor_ptr;
         iter++;
         iter %= TRACE_HISTORY_LENGTH;
     }
@@ -2761,4 +2761,3 @@ void __afl_stack_call_back() {
 }
 
 #undef write_error
-

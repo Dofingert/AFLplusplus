@@ -1,6 +1,6 @@
 /*
-    This function is used to test difference between given stack trace map and trace sets.
-*/
+   This function is used to test difference between given stack trace map and trace sets.
+   */
 
 #include "afl-fuzz.h"
 #include "stack_param.h"
@@ -9,6 +9,9 @@ float evaluate_diff(u64* new_inputs, u64* ref_set, u32 test_cnt)
 {
     if(test_cnt > MAX_RECORD_HISTORY_SIZE) test_cnt = MAX_RECORD_HISTORY_SIZE;
     if(test_cnt < 0) test_cnt = 0;
+    if(test_cnt == 0) {
+        return 0.0f;
+    }
     // 对 new_inputs 中的每个字，寻找其在 test_set 中 hammiing distance 的最小值
     // 以此最小值作为该 new_inputs 的该字的偏离值，最后返回所有偏离值之和
     float diff_score = 0;
@@ -23,6 +26,9 @@ float evaluate_diff(u64* new_inputs, u64* ref_set, u32 test_cnt)
             u8 flag = cur_distance < min_distance ? 1 : 0;
             min_distance = flag ? cur_distance : min_distance;
             if(min_distance==0)break;
+        }
+        if(min_distance != 0) {
+            printf("None zero distance found %d !\n", test_cnt);
         }
         diff_score += min_distance;
     }
