@@ -22,6 +22,7 @@ float evaluate_diff(u64* new_inputs, u64* ref_set, u32 test_cnt)
             asm("popcnt %1,%0" : "=r"(cur_distance) : "r"(lr_diff) :);
             u8 flag = cur_distance < min_distance ? 1 : 0;
             min_distance = flag ? cur_distance : min_distance;
+            if(min_distance==0)break;
         }
         diff_score += min_distance;
     }
